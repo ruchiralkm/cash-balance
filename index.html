@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Note Generator</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .note-table th,
+      .note-table td {
+        text-align: center;
+        vertical-align: middle;
+      }
+      .bg-orange {
+        background-color: orange !important;
+      }
+      .bg-green {
+        background-color: green !important;
+        color: white;
+      }
+      input[type="number"]::-webkit-inner-spin-button {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="p-5">
+    <div class="container">
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <input
+            id="amountInput"
+            type="number"
+            class="form-control text-center"
+            placeholder="Enter Amount"
+          />
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-success w-100" onclick="generateNotes()">
+            Generate
+          </button>
+        </div>
+      </div>
+
+      <table class="table table-bordered note-table">
+        <thead class="bg-orange">
+          <tr>
+            <th>MONEY</th>
+            <th>COUNT</th>
+            <th>TOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="noteBody"></tbody>
+        <tfoot class="bg-green">
+          <tr>
+            <th>TOTAL</th>
+            <th id="totalCount">0</th>
+            <th id="totalValue">0</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <script>
+      const denominations = [5000, 1000, 500, 100, 50, 20];
+
+      const noteBody = document.getElementById("noteBody");
+
+      // Build table
+      denominations.forEach((denom) => {
+        noteBody.innerHTML += `
+        <tr data-denom="${denom}">
+          <td>${denom}</td>
+          <td><input type="number" min="0" class="form-control text-center countInput" readonly></td>
+          <td class="totalCell">0</td>
+        </tr>
+      `;
+      });
+
+      function updateTotals() {
+        let totalVal = 0,
+          totalCount = 0;
+        document.querySelectorAll("#noteBody tr").forEach((row) => {
+          const denom = parseInt(row.getAttribute("data-denom"));
+          const count = parseInt(row.querySelector(".countInput").value || "0");
+          const total = denom * count;
+          row.querySelector(".totalCell").textContent = total;
+          totalVal += total;
+          totalCount += count;
+        });
+        document.getElementById("totalValue").textContent = totalVal;
+        document.getElementById("totalCount").textContent = totalCount;
+      }
+
+      function generateNotes() {
+        const amountInput = parseInt(
+          document.getElementById("amountInput").value || "0"
+        );
+        if (amountInput <= 0) {
+          alert("Enter a valid amount.");
+          return;
+        }
+
+        let remaining = amountInput;
+        const inputs = document.querySelectorAll(".countInput");
+        const newCounts = Array(denominations.length).fill(0);
+
+        // Reset all fields
+        inputs.forEach((input) => (input.value = ""));
+        document
+          .querySelectorAll(".totalCell")
+          .forEach((cell) => (cell.textContent = "0"));
+
+        // Randomly distribute
+        while (remaining > 0) {
+          const available = denominations
+            .map((d, i) => ({ d, i }))
+            .filter((x) => x.d <= remaining);
+
+          if (available.length === 0) break;
+
+          const rand = available[Math.floor(Math.random() * available.length)];
+          newCounts[rand.i]++;
+          remaining -= rand.d;
+        }
+
+        // Ensure no denomination is 0 by redistributing (if possible)
+        const nonZeroDenoms = denominations.filter((d, i) => newCounts[i] > 0);
+        if (nonZeroDenoms.length === 1) {
+          const singleIndex = newCounts.findIndex((x) => x > 0);
+          if (newCounts[singleIndex] > 1) {
+            newCounts[singleIndex]--;
+            const altIndex = (singleIndex + 1) % newCounts.length;
+            newCounts[altIndex]++;
+          }
+        }
+
+        // Update UI
+        inputs.forEach((input, i) => (input.value = newCounts[i]));
+
+        updateTotals();
+      }
+    </script>
+  </body>
+</html>
